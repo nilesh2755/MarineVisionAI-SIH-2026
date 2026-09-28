@@ -1,8 +1,10 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/auth.store';
 
+const API_URL = import.meta.env.VITE_API_URL || '/api';
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: API_URL,
 });
 
 api.interceptors.request.use((config) => {
@@ -20,6 +22,7 @@ let pendingQueue: (() => void)[] = [];
 
 api.interceptors.response.use(
   (response) => response,
+
   async (error) => {
     const original = error.config;
 
@@ -48,8 +51,10 @@ api.interceptors.response.use(
 
       try {
         const { data } = await axios.post(
-          `${import.meta.env.VITE_API_URL || '/api'}/auth/refresh`,
-          { refreshToken },
+          `${API_URL}/auth/refresh`,
+          {
+            refreshToken,
+          },
         );
 
         setSession(
@@ -58,14 +63,18 @@ api.interceptors.response.use(
           user!,
         );
 
-        pendingQueue.forEach((cb) => cb());
+        pendingQueue.forEach((callback) => callback());
         pendingQueue = [];
+
         isRefreshing = false;
 
         return api(original);
       } catch (refreshError) {
         isRefreshing = false;
+        pendingQueue = [];
+
         clearSession();
+
         window.location.href = '/login';
 
         return Promise.reject(refreshError);
